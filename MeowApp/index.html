@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Котозов</title>
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#0a0f1a">
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('service-worker.js');
+        });
+      }
+    </script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+        html, body {
+            width: 100%;
+            height: 100%;
+            background: #0a0f1a;
+            overflow: hidden;
+            touch-action: none;
+            font-family: system-ui, sans-serif;
+        }
+        .app {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+        .cat-btn {
+            width: 100%;
+            height: 100%;
+            border: none;
+            background: none;
+            cursor: pointer;
+            padding: 0;
+            outline: none;
+            -webkit-tap-highlight-color: transparent;
+            touch-action: none;
+        }
+        .cat-img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;   /* или cover — выберите, что лучше для ваших картинок */
+            background: #0a0f1a;
+            pointer-events: none;
+        }
+        /* Подсказка */
+        .hint {
+            position: absolute;
+            bottom: 30px;
+            left: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            color: white;
+            text-align: center;
+            padding: 16px 20px;
+            border-radius: 60px;
+            font-size: 1.3rem;
+            font-weight: 500;
+            border: 1px solid rgba(255,255,255,0.2);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            transition: opacity 0.3s;
+            pointer-events: none;
+            z-index: 10;
+        }
+        .hint.hidden {
+            opacity: 0;
+        }
+    </style>
+</head>
+<body>
+<div class="app">
+    <button class="cat-btn" id="catButton">
+        <img class="cat-img" id="catImage" src="MA.png" alt="Кот">
+    </button>
+    <div class="hint" id="hintOverlay">Нажми на котика,<br>чтобы воззвать</div>
+</div>
+<script>
+    (function() {
+        "use strict";
+
+        // ---------- НАСТРОЙКИ ----------
+        const SILENT_IMG = 'MA.png';       // кот молчит
+        const ACTIVE_IMG = 'cry.png';      // кот кричит
+        const SOUND_FILES = ['mu-1.mp3', 'mu-2.mp3', 'mu-3.mp3', 'mu-4.mp3', 'mu-5.mp3'];
+        // Все 5 звуков имеют равные шансы (20%)
+        
+        // ---------- DOM элементы ----------
+        const catImage = document.getElementById('catImage');
+        const catButton = document.getElementById('catButton');
+        const hintOverlay = document.getElementById('hintOverlay');
+
+        // ---------- Аудио ----------
+        const audioElements = SOUND_FILES.map(src => {
+            const audio = new Audio(src);
+            audio.preload = 'auto';
+            return audio;
+        });
+
+        let currentAudio = null;
+        let isPressed = false;
+        let hintDismissed = false; // скрыта ли подсказка после первого нажатия
+
+        // ---------- Функции ----------
+        function playRandomSound() {
+            if (audioElements.length === 0) return;
+            // Остановить предыдущий
+            if (currentAudio) {
+                currentAudio.pause();
+                currentAudio.currentTime = 0;
+            }
+            // Абсолютно случайный выбор с равными шансами
+            const randomIndex = Math.floor(Math.random() * audioElements.length);
+            currentAudio = audioElements[randomIndex];
+            currentAudio.currentTime = 0;
+            currentAudio.play().catch(e => console.log('Ошибка воспроизведения:', e));
+        }
+
+        function stopSound() {
+            if (currentAudio) {
+                currentAudio.pause();
+                currentAudio.currentTime = 0;
+                currentAudio = null;
+            }
+        }
+
+        function startPress() {
+            if (isPressed) return;
+            isPressed = true;
+            
+            // Скрываем подсказку при первом нажатии
+            if (!hintDismissed) {
+                hintOverlay.classList.add('hidden');
+                hintDismissed = true;
+            }
+            
+            catImage.src = ACTIVE_IMG;
+            playRandomSound();
+        }
+
+        function endPress() {
+            if (!isPressed) return;
+            isPressed = false;
+            catImage.src = SILENT_IMG;
+            stopSound();
+        }
+
+        // ---------- Обработчики событий ----------
+        catButton.addEventListener('mousedown', startPress);
+        catButton.addEventListener('mouseup', endPress);
+        catButton.addEventListener('mouseleave', endPress);
+        
+        catButton.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            startPress();
+        }, {passive: false});
+        
+        catButton.addEventListener('touchend', (e) => {
+            e.preventDefault();
+            endPress();
+        });
+        
+        catButton.addEventListener('touchcancel', (e) => {
+            e.preventDefault();
+            endPress();
+        });
+
+        catButton.addEventListener('contextmenu', (e) => e.preventDefault());
+
+        // По умолчанию стоит правильная картинка
+        catImage.src = SILENT_IMG;
+    })();
+</script>
+</body>
+</html>
